@@ -29,7 +29,7 @@ char map[21][32] = {
     "|                             |",
     "+#############################+" };
 
-void ShowMap() //vypisanie obsahu pola map na obrazovku
+void Vytvormapu() //vypisanie obsahu pola map na obrazovku
 {
     for (int i = 0; i < 21; i++) //cyklus prechadza po riadkoch
     {
@@ -38,6 +38,14 @@ void ShowMap() //vypisanie obsahu pola map na obrazovku
 }
 
 void gotoxy(short x, short y) //nastavenie polohy na obrazovke
+{
+    HANDLE hStdout = GetStdHandle(STD_OUTPUT_HANDLE); //zistenie handle obrazovky
+    COORD position = { x, y }; //vlozenie polohy kurzora x, y na obrazovke do struktury position
+    SetConsoleCursorPosition(hStdout, position); //nastavenie kurzora na obrazovke na polohu x,y
+}
+
+
+void gotoxy2(short x, short y) //nastavenie polohy na obrazovke
 {
     HANDLE hStdout = GetStdHandle(STD_OUTPUT_HANDLE); //zistenie handle obrazovky
     COORD position = { x, y }; //vlozenie polohy kurzora x, y na obrazovke do struktury position
@@ -62,6 +70,10 @@ struct target //definovanie struktury pre cestuod ducha k pac-manovi
 vector<target> najdena_cesta; //zadefinovanie premennej najdena_cesta ako vector so strukturou target
 
 vector<walk> BFSPrehladavanie; //zadefinovanie premennej BFSPrehladavanie ako vector so strukturou walk
+
+//vector<target> najdena_cestaG; //zadefinovanie premennej najdena_cesta ako vector so strukturou target
+
+//vector<walk> BFSPrehladavanieG; //zadefinovanie premennej BFSPrehladavanie ako vector so strukturou walk
 //vector<target>  pomoc;
 
 void PrehladajPolicko(int x, int y, int wc, int back) //funckia na pridanie volneho policka pri BFS prehladavani
@@ -120,9 +132,51 @@ void NajdiCestu(int sx, int sy, int x, int y)//vstupy sx, sy su polha ducha, sur
     BFSPrehladavanie.clear(); //vycisti BFSPrehladavanie
 }
 
+void NajdiCestu2(int gx, int gy, int x, int y)//vstupy sx, sy su polha ducha, suradnice x,y su poloha pacmanna
+{
+    memcpy(tmp_map, map, sizeof(map)); //kopirovanie v pamati pola map do pola tmp_map
+    BFSPrehladavanie.clear(); //vycistenie struktury BFSPrehladavanie
+    walk tmp; //zadefinovanie pomocnej struktury formatu BFSPrehladavanie
+    tmp.x = gx; //zapamatanie polohy x ducha 
+    tmp.y = gy; //zapamatanie polohy y ducha 
+    tmp.walk_count = 0; //nastavenie pocitadla poctu stvorcekov ducha od pacmana 
+    tmp.back = -1; //nastavenie pocitadla cesty od ducha k pacmannovi
+    BFSPrehladavanie.push_back(tmp);//prekopirovanie struktury tmp do BFSPrehladavanie
+
+    int i = 0;
+    while (i < BFSPrehladavanie.size())
+    {
+        if (BFSPrehladavanie[i].x == x && BFSPrehladavanie[i].y == y)// je poloha ducha rovnaka ako poloha pacmanna?
+        {
+            najdena_cesta.clear(); //vycistenie struktury najdena_cesta
+            target tmp2;//zadefinovanie pomocnej struktury formatu najdena_cesta
+            while (BFSPrehladavanie[i].walk_count != 0)//rob pokial nie je cesta od ducha k pacmannovi prazdna
+            {
+                tmp2.x = BFSPrehladavanie[i].x; //do pomocnej premennej tmp2.x vloz i-tu polohu x cesty od ducha k pacmannovi
+                tmp2.y = BFSPrehladavanie[i].y; //do pomocnej premennej tmp2.y vloz i-tu polohu y cesty od ducha k pacmannovi
+                najdena_cesta.push_back(tmp2); //prekopiruj i-tu polohu x,y cesty od ducha k pacmannovi do najdena_cesta
+
+                i = BFSPrehladavanie[i].back; //nastavenie dalsieho policka na ceste v smere od ducha k pacmannovi 
+            }
+
+            break;
+        }
+
+        PrehladajPolicko(BFSPrehladavanie[i].x + 1, BFSPrehladavanie[i].y, BFSPrehladavanie[i].walk_count + 1, i); //zistovanie ci policko s polohou x+1, y (vpravo) je volne
+        PrehladajPolicko(BFSPrehladavanie[i].x - 1, BFSPrehladavanie[i].y, BFSPrehladavanie[i].walk_count + 1, i); //zistovanie ci policko s polohou x-1, y (vlavo) je volne
+        PrehladajPolicko(BFSPrehladavanie[i].x, BFSPrehladavanie[i].y + 1, BFSPrehladavanie[i].walk_count + 1, i); //zistovanie ci policko s polohou y+1, y (dole) je volne
+        PrehladajPolicko(BFSPrehladavanie[i].x, BFSPrehladavanie[i].y - 1, BFSPrehladavanie[i].walk_count + 1, i); //zistovanie ci policko s polohou y-1, y (hore) je volne
+
+
+        i++;
+    }
+
+    BFSPrehladavanie.clear(); //vycisti BFSPrehladavanie
+}
+
 int main()
 {
-    bool beh = true; // zapneme premennu running
+    bool beh = true; // zapneme premennu beh
     int x = 15; // pociatocna poloha pac-mana x  
     int y = 15; // pociatocna poloha pac-mana y  
     int old_x; // pomocne premenne na zapamätanie starej polohy x
@@ -130,6 +184,9 @@ int main()
 
     int ex = 15; // pociatocna poloha duch
     int ey = 8; // pociatocna poloha duch
+
+    int gx = 15; // pociatocna poloha duch
+    int gy = 9; // pociatocna poloha duch
 
     int skore = 0; // pocitadlo skore
 
@@ -151,7 +208,7 @@ int main()
     }
 
     system("cls"); // vymazanie obrazovky
-    ShowMap(); //funkcia na zobrazenie mapy na obrazovke
+    Vytvormapu(); //funkcia na zobrazenie mapy na obrazovke
     
 
     gotoxy(x, y); // funckia nastavi kurzor na poziciu x,y na obrazovke
@@ -160,6 +217,7 @@ int main()
     int frame = 0;
 
     NajdiCestu(ex, ey, x, y); // najde cestu medzi duchom a pac-manom
+    NajdiCestu2(gx, gy, x, y); // najde cestu medzi duchom a pac-manom
 
     while (beh) 
     {
@@ -214,12 +272,20 @@ int main()
         {
             NajdiCestu(ex, ey, x, y); // najdi novu cestu medzi duchom a pac-manom
         }
+        if (old_x != x || old_y != y) // ak sa povodna poloha pac-mana zmenila
+        {
+            NajdiCestu2(gx, gy, x, y); // najdi novu cestu medzi duchom a pac-manom
+        }
 
         gotoxy(x, y); // nastavenie na zmenene suradnice
         cout << "H"; // na novych suradniciach vytvori Pac-mana
 
         map[ey][ex] = '.'; // nastavenie na zmenene suradnice ducha v poli map
         gotoxy(ex, ey); // nastavenie na zmenene suradnice ducha na obrazovke
+        cout << "."; // vytvori na novych suradniciah bodku na obrazovke
+
+        map[gy][gx] = '.'; // nastavenie na zmenene suradnice ducha v poli map
+        gotoxy2(gx, gy); // nastavenie na zmenene suradnice ducha na obrazovke
         cout << "."; // vytvori na novych suradniciah bodku na obrazovke
        // cout << frame << endl;
        // cout << rychlost << endl;
@@ -238,10 +304,18 @@ int main()
         gotoxy(ex, ey); // presunie sa na suradnice ex, ey
         cout << "E"; // vytvori na novych suradniciah Ducha
 
+        gotoxy2(gx, gy); // presunie sa na suradnice ex, ey
+        cout << "G"; // vytvori na novych suradniciah Ducha
+
         if (ex == x && ey == y) // ak sa suradnice ex, ey rovnaju suradniciam x, y duch nasiel pacmana
         {
             break; // koniec hry
         }
+        if (gx == x && gy == y) // ak sa suradnice ex, ey rovnaju suradniciam x, y duch nasiel pacmana
+        {
+            break; // koniec hry
+        }
+
 
         
         gotoxy(32, 1);//nastavenie polohy na vypisanie skore
